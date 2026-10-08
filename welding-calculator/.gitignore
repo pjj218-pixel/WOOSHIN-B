@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+product_images/
+.venv/
+.github-publish/
+.superpowers/
+build/
+dist/
+*.exe

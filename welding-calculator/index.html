@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>용접 시간·생산량 계산기</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="csv-import.js" defer></script>
+  <script src="wire-rules.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">머플러 생산기술 · 첫 기능</p>
+      <h1>용접 시간·생산량 계산기</h1>
+      <p>한 사이클에 여러 용접 구간과 여러 제품이 있는 공정의 계획용 추정치를 계산합니다.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="input-title">
+      <div class="section-heading">
+        <div>
+          <p class="step">01 · 입력</p>
+          <h2 id="input-title">작업 조건</h2>
+        </div>
+        <button id="sample-button" class="secondary" type="button">예시값 불러오기</button>
+      </div>
+      <p class="hint">예시값은 화면 확인용이며 실제 용접 조건이 아닙니다. 값을 확인한 뒤 계산해 주세요.</p>
+      <div class="upload-box">
+        <label for="csv-file"><strong>작업 조건 CSV 파일 첨부</strong><span>한 행이 용접 구간 하나입니다. 첫 행에 생산 조건을 입력합니다.</span></label>
+        <input id="csv-file" type="file" accept=".csv,text/csv">
+        <a href="예시_용접조건.csv" download>예시 CSV 파일 받기</a>
+        <p id="file-status" role="status">CSV 파일을 선택하면 입력칸에 반영하고 결과를 계산합니다.</p>
+      </div>
+      <form id="calculator" novalidate>
+        <div class="section-heading subheading"><h3>제품 정보</h3></div>
+        <div class="fields">
+          <label>차종 <span>선택 입력</span><input name="vehicle" type="text" placeholder="예: 시험 차종 A"></label>
+          <label>제품명 <span>선택 입력</span><input name="productName" type="text" placeholder="예: 리어 머플러"></label>
+        </div>
+        <div class="section-heading subheading"><h3>용접 구간</h3><button id="add-row" class="secondary" type="button">+ 용접 구간 추가</button></div>
+        <p class="hint">각 구간의 길이를 입력하고, 이동 속도로 시간을 계산하거나 시간을 직접 입력할 수 있습니다. 여러 구간은 순서대로 용접한다고 가정합니다.</p>
+        <div id="weld-rows" class="weld-rows"></div>
+        <div class="section-heading subheading"><h3>설비와 용접 방식</h3></div>
+        <div class="fields">
+          <label>용접 방식 <span>와이어 후보는 GMAW 기준</span><select name="process"><option value="">선택</option><option value="GMAW">MIG/MAG (GMAW)</option><option value="GTAW">TIG (GTAW)</option><option value="other">기타</option></select></label>
+          <label>사용 설비 <span>모델 또는 설비명</span><input name="equipment" type="text" placeholder="예: 로봇 용접기 1호기"></label>
+          <label>보호가스 <span>실제 사용 혼합비</span><select name="gas"><option value="">선택</option><option value="Ar98O2_2">Ar 98% / O₂ 2%</option><option value="Ar98CO2_2">Ar 98% / CO₂ 2%</option><option value="other">기타</option></select></label>
+        </div>
+        <div class="section-heading subheading"><h3>사이클과 생산 일정</h3></div>
+        <div class="fields">
+          <label>한 사이클 생산 수량 <span>개/사이클</span><input name="batch" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 2" required></label>
+          <label>비아크 시간 <span>초/사이클</span><input name="nonArc" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 30" required></label>
+          <label>가동률 <span>%</span><input name="uptime" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="예: 80" required></label>
+          <label>일일 근무시간 <span>시간/일</span><input name="hours" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 8" required></label>
+          <label>월간 가동일수 <span>일/월</span><input name="days" type="number" inputmode="numeric" min="1" max="31" step="1" placeholder="예: 22" required></label>
+          <label>연간 가동 개월 수 <span>개월/년</span><input name="months" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="예: 12" required></label>
+        </div>
+        <p id="error" class="error" role="alert" hidden></p>
+        <button class="primary" type="submit">계산하기 <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
+
+    <section id="result" class="panel result" aria-labelledby="result-title" hidden>
+      <div class="section-heading">
+        <div><p class="step">02 · 결과</p><h2 id="result-title">예상 시간과 생산량</h2></div>
+        <span class="status">미검증 추정</span>
+      </div>
+      <p id="source" class="source"></p>
+      <p id="product-context" class="product-context"></p>
+      <p id="sample-warning" class="warning" hidden>화면 확인용 예시 데이터입니다. 양산 조건·확정 생산능력으로 사용 불가</p>
+      <div class="metrics">
+        <article><span>총 용접 시간</span><strong id="arc-time"></strong><small>초/사이클</small></article>
+        <article><span>사이클 시간</span><strong id="cycle-time"></strong><small>초/사이클</small></article>
+        <article class="accent"><span>UPH</span><strong id="uph"></strong><small>개/시간</small></article>
+        <article><span>일 예상 생산량</span><strong id="daily"></strong><small>개/일</small></article>
+        <article><span>월 예상 생산량</span><strong id="monthly"></strong><small>개/월</small></article>
+        <article><span>년 예상 생산량</span><strong id="yearly"></strong><small>개/년</small></article>
+      </div>
+      <div class="recommendation-section">
+        <h3>와이어 후보와 용접 조건 상태</h3>
+        <p class="hint">제조사 자료를 바탕으로 한 검토 후보입니다. 현재 사내 승인 조건표가 없어 전압·전류·와이어 송급 속도를 제시하지 않습니다.</p>
+        <div id="wire-results" class="wire-results"></div>
+      </div>
+      <details open>
+        <summary>입력값과 계산 근거</summary>
+        <div id="breakdown" class="breakdown"></div>
+      </details>
+      <p class="footnote">각 용접 구간의 시간을 합산합니다. 동시에 진행되는 용접 헤드, 품질 불량, 재작업, 병목 공정 및 병렬 설비는 반영하지 않습니다.</p>
+    </section>
+  </main>
+  <template id="weld-row-template">
+    <div class="weld-row">
+      <div class="row-heading"><strong class="row-title"></strong><button class="remove-row" type="button" aria-label="용접 구간 삭제">삭제</button></div>
+      <div class="row-fields">
+        <label>용접 길이 <span>mm/구간</span><input class="row-length" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 600"></label>
+        <label>시간 입력 방식 <span>구간별 선택</span><select class="row-mode"><option value="speed">이동 속도로 계산</option><option value="time">용접 시간 직접 입력</option></select></label>
+        <label class="speed-wrap">용접 이동 속도 <span>mm/min</span><input class="row-speed" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 300"></label>
+        <label class="time-wrap" hidden>용접 시간 <span>초/구간</span><input class="row-time" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 60"></label>
+        <label>부품 A 재질 <span>정확한 규격 선택</span><select class="row-material-a"><option value="">선택</option><option value="409">409</option><option value="409Ti">409Ti</option><option value="304">304</option><option value="304L">304L</option><option value="carbon">탄소강</option><option value="other">기타</option></select></label>
+        <label>부품 A 두께 <span>mm</span><input class="row-thickness-a" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 1.5"></label>
+        <label>부품 B 재질 <span>정확한 규격 선택</span><select class="row-material-b"><option value="">선택</option><option value="409">409</option><option value="409Ti">409Ti</option><option value="304">304</option><option value="304L">304L</option><option value="carbon">탄소강</option><option value="other">기타</option></select></label>
+        <label>부품 B 두께 <span>mm</span><input class="row-thickness-b" type="number" inputmode="decimal" min="0" step="any" placeholder="예: 1.5"></label>
+        <label>이음 형상 <span>구간별 선택</span><select class="row-joint"><option value="">선택</option><option value="butt">맞대기</option><option value="lap">겹치기</option><option value="fillet">필릿</option><option value="other">기타</option></select></label>
+        <label>용접 자세 <span>실제 작업 자세</span><select class="row-position"><option value="">선택</option><option value="flat">아래보기</option><option value="horizontal">수평</option><option value="vertical">수직</option><option value="overhead">위보기</option><option value="rotating">부품 회전</option><option value="other">기타</option></select></label>
+      </div>
+      <p class="row-preview">구간 시간을 입력해 주세요.</p>
+    </div>
+  </template>
+</body>
+</html>
