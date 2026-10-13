@@ -7,3 +7,4 @@ product_images/
 build/
 dist/
 *.exe
+output/qt_*_preview.png

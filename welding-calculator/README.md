@@ -1,6 +1,22 @@
-# 용접 시간·생산량 계산기 (Python GUI)
+# 용접 생산기술 계산기 (PySide6)
 
-Windows에서 [용접계산기_실행.cmd](용접계산기_실행.cmd)를 더블클릭하거나 이 폴더에서 `python weld_gui.py`를 실행합니다. Python 3과 Tkinter가 필요하며, GUI 실행에 필요한 Tcl/Tk 리소스는 `runtime-tcl` 폴더에 포함했습니다. 기본 계산과 PNG·GIF 미리보기에는 외부 패키지가 필요하지 않습니다.
+## 새 화면 실행
+
+Windows에서 이 폴더의 `용접계산기_실행.cmd`를 더블클릭합니다. 처음 실행하기 전에는 PowerShell에서 다음 명령으로 작업 폴더 전용 환경과 패키지를 설치합니다.
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe qt_app.py
+```
+
+새 화면은 `작업 조건`, `결과`, `사내 승인 조건`, `와이어 사용량`, `실측 검증`의 다섯 메뉴를 사용합니다. 기존 Python 계산 모듈과 CSV 형식은 그대로 사용합니다. 차종·제품명과 제품 형상 이미지는 로컬 화면에서만 처리하며, 이미지 자동 판독이나 외부 업로드는 하지 않습니다. 와이어 제품은 제조사 자료에 근거한 시험 후보이고 양산 승인 여부는 사내 조건표와 실제 시험으로 판단합니다.
+
+기존 Tkinter 화면은 보관용으로 남겨두었습니다. 필요하면 `python weld_gui.py`로 실행할 수 있습니다. PySide6 전환 테스트까지 확인하려면 `.\.venv\Scripts\python.exe -m unittest test_weld.py test_qt_gui.py -q`를 실행합니다.
+
+## 기존 Tkinter 사용 설명
+
+기존 Tkinter 화면에는 Python 3과 Tkinter가 필요하며, GUI 실행에 필요한 Tcl/Tk 리소스는 `runtime-tcl` 폴더에 포함했습니다. 기본 계산과 PNG·GIF 미리보기에는 외부 패키지가 필요하지 않습니다.
 
 ## 사용법
 

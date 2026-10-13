@@ -1,3 +1,8 @@
 @echo off
 cd /d "%~dp0"
-start "" pythonw "weld_gui.py"
+if exist ".venv\Scripts\python.exe" (
+  ".venv\Scripts\python.exe" "qt_app.py"
+) else (
+  python "qt_app.py"
+)
+if errorlevel 1 pause
