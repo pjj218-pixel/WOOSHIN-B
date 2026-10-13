@@ -44,6 +44,12 @@ CHOICES = {
     "joint": ("", "butt", "lap", "fillet", "other"),
     "position": ("", "flat", "horizontal", "vertical", "overhead", "rotating", "other"),
 }
+KOREAN_CHOICES = {
+    "process": {"": "선택", "GMAW": "MIG/MAG 용접", "GTAW": "TIG 용접", "other": "기타"},
+    "joint": {"": "선택", "butt": "맞대기", "lap": "겹치기", "fillet": "필릿", "other": "기타"},
+    "position": {"": "선택", "flat": "아래보기", "horizontal": "수평", "vertical": "수직",
+                 "overhead": "위보기", "rotating": "회전", "other": "기타"},
+}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 
@@ -59,7 +65,11 @@ def _field(grid, row, col, name, label):
     layout.addWidget(title)
     if name in CHOICES:
         widget = QComboBox()
-        widget.addItems(CHOICES[name])
+        if name in KOREAN_CHOICES:
+            for code in CHOICES[name]:
+                widget.addItem(KOREAN_CHOICES[name][code], code)
+        else:
+            widget.addItems(CHOICES[name])
         if name in ("materialA", "materialB"):
             widget.setEditable(True)
     else:
@@ -72,13 +82,20 @@ def _field(grid, row, col, name, label):
 
 
 def _get(widget):
-    return widget.currentText() if isinstance(widget, QComboBox) else widget.text()
+    if isinstance(widget, QComboBox):
+        data = widget.currentData()
+        return data if data is not None else widget.currentText()
+    return widget.text()
 
 
 def _set(widget, value):
     text = "" if value is None else str(value)
     if isinstance(widget, QComboBox):
-        widget.setCurrentText(text)
+        index = widget.findData(text)
+        if index >= 0:
+            widget.setCurrentIndex(index)
+        else:
+            widget.setCurrentText(text)
     else:
         widget.setText(text)
 

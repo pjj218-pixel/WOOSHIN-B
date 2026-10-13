@@ -57,6 +57,32 @@ class QtGuiTests(unittest.TestCase):
         self.assertFalse(self.window.work_page.raw_plan()["sample"])
         self.assertEqual(self.window.source, "사용자 입력")
 
+    def test_welding_choices_display_korean_and_preserve_saved_codes(self):
+        page = self.window.work_page
+        labels = {
+            "process": {"GMAW": "MIG/MAG 용접", "GTAW": "TIG 용접", "other": "기타"},
+            "joint": {"butt": "맞대기", "lap": "겹치기", "fillet": "필릿", "other": "기타"},
+            "position": {"flat": "아래보기", "horizontal": "수평", "vertical": "수직",
+                         "overhead": "위보기", "rotating": "회전", "other": "기타"},
+        }
+        widgets = {"process": page.common["process"],
+                   "joint": page.rows[0].widgets["joint"],
+                   "position": page.rows[0].widgets["position"]}
+        for field, choices in labels.items():
+            widget = widgets[field]
+            for code, korean in choices.items():
+                index = widget.findData(code)
+                self.assertNotEqual(index, -1)
+                self.assertEqual(widget.itemText(index), korean)
+                widget.setCurrentIndex(index)
+                raw = page.raw_plan()
+                self.assertEqual(raw[field] if field == "process" else raw["rows"][0][field], code)
+
+        page.load_raw_plan({"process": "GMAW", "rows": [{"joint": "butt", "position": "flat"}]})
+        self.assertEqual(page.common["process"].currentText(), "MIG/MAG 용접")
+        self.assertEqual(page.rows[0].widgets["joint"].currentText(), "맞대기")
+        self.assertEqual(page.rows[0].widgets["position"].currentText(), "아래보기")
+
     def test_sample_result_and_wire_candidates_match_core(self):
         self.window.load_sample()
         self.assertTrue(self.window.calculate_result())
